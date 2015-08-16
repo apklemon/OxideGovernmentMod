@@ -11,7 +11,7 @@ using UnityEngine;
 using Rust;
 using Newtonsoft.Json.Linq;
 
-namespace Oxide.Plugins
+namespace Oxide.Plugins 
 {
     [Info("Government", "BodyweightEnergy", "0.0.1", ResourceId = 0)]
     public class Governments : RustPlugin
