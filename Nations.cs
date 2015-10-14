@@ -13,15 +13,18 @@ using Newtonsoft.Json.Linq;
 
 namespace Oxide.Plugins 
 {
-    [Info("Government", "BodyweightEnergy", "0.0.1", ResourceId = 0)]
-    public class Governments : RustPlugin
+    [Info("Nations", "BodyweightEnergy", "0.0.1", ResourceId = 0)]
+    public class Nations : RustPlugin
     {
-        #region Plugin Private Members
+        #region Cached Variables
 
-        private const string GovernmentDataFilename = "GovernmentData";
-        private const string GovernmentSettingsFilename = "GovernmentSettings";
-        private static Dictionary<string, Government> govs;
-        private static Dictionary<string, Government> lookup;
+        private const string NationDataFilename = "GovernmentData";
+        private const string NationSettingsFilename = "GovernmentSettings";
+
+        FieldInfo displayName = typeof(BasePlayer).GetField("_displayName", (BindingFlags.Instance | BindingFlags.NonPublic));
+
+        private static Dictionary<string, Nation> nations;
+        private static Dictionary<string, Nation> lookup;
         private static Dictionary<string, string> originalNames;
         private static Dictionary<string, List<string>> permissionList;
         private static List<string> RankList;
@@ -42,8 +45,8 @@ namespace Oxide.Plugins
 
         public void SaveData()
         {
-            var data = Interface.GetMod().DataFileSystem.GetDatafile(GovernmentDataFilename);
-            var settings = Interface.GetMod().DataFileSystem.GetDatafile(GovernmentSettingsFilename);
+            var data = Interface.GetMod().DataFileSystem.GetDatafile(NationDataFilename);
+            var settings = Interface.GetMod().DataFileSystem.GetDatafile(NationSettingsFilename);
             // Saving Rank List Data
             var rankData = new List<object>();
             foreach (var rank in RankList) rankData.Add(rank);
@@ -63,38 +66,38 @@ namespace Oxide.Plugins
             // TODO
 
             // Saving Government Data
-            var govsData = new Dictionary<string, object>();
-            foreach (var gov in govs)
+            var nationsData = new Dictionary<string, object>();
+            foreach (var nation in nations)
             {
-                var govData = new Dictionary<string, object>();
-                govData.Add("name", gov.Value.Name);
+                var nationData = new Dictionary<string, object>();
+                nationData.Add("name", nation.Value.Name);
                 var members = new Dictionary<string, object>();
-                foreach (var imember in gov.Value.Members)
+                foreach (var imember in nation.Value.Members)
                     members.Add(imember.Key, imember.Value);
                 var guests = new List<object>();
-                foreach (var iguest in gov.Value.Guests)
+                foreach (var iguest in nation.Value.Guests)
                     guests.Add(iguest);
                 var inviteds = new List<object>();
-                foreach (var iinvited in gov.Value.Inviteds)
+                foreach (var iinvited in nation.Value.Inviteds)
                     inviteds.Add(iinvited);
-                govData.Add("members", members);
-                govData.Add("guests", guests);
-                govData.Add("inviteds", inviteds);
-                govsData.Add(gov.Key, govData);
+                nationData.Add("members", members);
+                nationData.Add("guests", guests);
+                nationData.Add("inviteds", inviteds);
+                nationsData.Add(nation.Key, nationData);
             }
-            data["governments"] = govsData;
-            Interface.GetMod().DataFileSystem.SaveDatafile(GovernmentDataFilename);
-            Interface.GetMod().DataFileSystem.SaveDatafile(GovernmentSettingsFilename);
+            data["governments"] = nationsData;
+            Interface.GetMod().DataFileSystem.SaveDatafile(NationDataFilename);
+            Interface.GetMod().DataFileSystem.SaveDatafile(NationSettingsFilename);
         }
 
         public void LoadData()
         {
-            govs.Clear();
+            nations.Clear();
             lookup.Clear();
             RankList.Clear();
             permissionList.Clear();
-            var data = Interface.GetMod().DataFileSystem.GetDatafile(GovernmentDataFilename);
-            var settings = Interface.GetMod().DataFileSystem.GetDatafile(GovernmentSettingsFilename);
+            var data = Interface.GetMod().DataFileSystem.GetDatafile(NationDataFilename);
+            var settings = Interface.GetMod().DataFileSystem.GetDatafile(NationSettingsFilename);
 
             // Load Rank List
             if (settings["ranks"] != null)
@@ -175,14 +178,14 @@ namespace Oxide.Plugins
                     {
                         inviteds.Add(iinvited.ToString());
                     }
-                    var newGov = new Government() { Tag = tag, Name = name};
+                    var newGov = new Nation() { Tag = tag, Name = name};
                     foreach (var m in members) newGov.AddMember(m.Key, m.Value);
                     newGov.Guests = guests;
                     newGov.Inviteds = inviteds;
-                    govs.Add(tag, newGov);
+                    nations.Add(tag, newGov);
                 }
             }
-            Puts("Successfully loaded (" + govs.Count + ") governments.");
+            Puts("Successfully loaded (" + nations.Count + ") governments.");
 
         }
 
@@ -191,10 +194,10 @@ namespace Oxide.Plugins
 
         #region Plugin Methods
 
-        private bool govNameExists(string name)
+        private bool nationNameExists(string name)
         {
             var exists = false;
-            foreach (var gov in govs)
+            foreach (var gov in nations)
             {
                 if (gov.Value.Name == name)
                 {
@@ -212,11 +215,11 @@ namespace Oxide.Plugins
             throw (new Exception("Attempted to assign invalid rank \"" + rank_str + "\"."));
             return null;
         }
-        public Government getGovByUserID (string playerId)
+        public Nation getNationByUserID (string playerId)
         {
-            if (govs.ContainsKey(playerId))
+            if (nations.ContainsKey(playerId))
             {
-                return govs[playerId];
+                return nations[playerId];
             }
             return null;
         }
@@ -224,17 +227,17 @@ namespace Oxide.Plugins
         {
             return lookup[playerId].Members[playerId];
         }
-        public bool isMemberOfGov (string playerId, string tag)
+        public bool isMemberOfNation (string playerId, string tag)
         {
-            return (govs[tag].isMember(playerId));
+            return (nations[tag].isMember(playerId));
         }
-        public bool isGuestOfGov (string playerId, string tag)
+        public bool isGuestOfNation (string playerId, string tag)
         {
-            return (govs[tag].isGuest(playerId));
+            return (nations[tag].isGuest(playerId));
         }
-        public bool isInvitedOfGov(string playerId, string tag)
+        public bool isInvitedOfNation(string playerId, string tag)
         {
-            return (govs[tag].isInvited(playerId));
+            return (nations[tag].isInvited(playerId));
         }
 
         private BasePlayer FindPlayerByPartialName(string name)
@@ -268,13 +271,13 @@ namespace Oxide.Plugins
             }
             return player;
         }
-        private string StripTag(string name, Government gov)
+        private string StripTag(string name, Nation nation)
         {
-            if (gov == null)
+            if (nation == null)
                 return name;
-            var re = new Regex(@"^\[" + gov.Tag + @"\]\s");
+            var re = new Regex(@"^\[" + nation.Tag + @"\]\s");
             while (re.IsMatch(name))
-                name = name.Substring(gov.Tag.Length + 3);
+                name = name.Substring(nation.Tag.Length + 3);
 
             Puts("StripTag result = " + name);
             return name;
@@ -307,8 +310,8 @@ namespace Oxide.Plugins
         {
             var prevName = player.displayName;
             var playerId = player.userID.ToString();
-            var gov = getGovByUserID(playerId);
-            player.displayName = StripTag(player.displayName, gov);
+            var gov = getNationByUserID(playerId);
+            displayName.SetValue(player, StripTag(player.displayName, gov));
             if (gov == null)
             {
                 return;
@@ -317,7 +320,7 @@ namespace Oxide.Plugins
             {
                 var tag = "[" + gov.Tag + "] ";
                 if (!player.displayName.StartsWith(tag))
-                    player.displayName = tag + prevName;
+                    displayName.SetValue(player, tag + prevName);
             }
             if (player.displayName != prevName)
                 player.SendNetworkUpdate();
@@ -339,17 +342,17 @@ namespace Oxide.Plugins
             }
         } 
 
-        private void CreateGovernment(string tag, string name, string creatorID)
+        private void CreateNation(string tag, string name, string creatorID)
         {
-            var newGov = new Government() { Tag = tag, Name = name };
-            govs.Add(tag, newGov);
+            var newGov = new Nation() { Tag = tag, Name = name };
+            nations.Add(tag, newGov);
             newGov.AddMember(creatorID, Rank("DICTATOR"));
         }
-        private void DisbandGovernment (string tag)
+        private void DisbandNation (string tag)
         {
-            if(govs.ContainsKey(tag))
+            if(nations.ContainsKey(tag))
             {
-                govs.Remove(tag);
+                nations.Remove(tag);
             }
         }
 
@@ -374,8 +377,8 @@ namespace Oxide.Plugins
         {
             try
             {
-                lookup = new Dictionary<string, Government>();
-                govs = new Dictionary<string, Government>();
+                lookup = new Dictionary<string, Nation>();
+                nations = new Dictionary<string, Nation>();
                 permissionList = new Dictionary<string, List<string>>();
                 RankList = new List<string>();
                 damageScaleTable = new Dictionary<string, Dictionary<string, float>>();
@@ -479,7 +482,7 @@ namespace Oxide.Plugins
             sb.Append("\n");
             // Governments Data Dump
             sb.Append("Governments Data:\n\n");
-            foreach(var gov in govs)
+            foreach(var gov in nations)
             {
                 sb.Append("[" + gov.Key + "] " + gov.Value.Name + "\n");
                 foreach(var member in gov.Value.Members) sb.Append(member.Key + "\t" + member.Value + "\t" + FindPlayerNameByID(member.Key) + "\n");
@@ -517,17 +520,17 @@ namespace Oxide.Plugins
             {
                 sb.Append("You are already a member of a government.");
             }
-            else if (govs.ContainsKey(args[0]))
+            else if (nations.ContainsKey(args[0]))
             {
                 sb.Append("This tag has already been taken. Try another tag.");
             }
-            else if (govNameExists(args[1]))
+            else if (nationNameExists(args[1]))
             {
                 sb.Append("This name has already been taken. Try another name.");
             }
             else
             {
-                CreateGovernment(args[0], args[1], player.userID.ToString());
+                CreateNation(args[0], args[1], player.userID.ToString());
                 sb.Append("You have successfully created the " + args[1] + " government, and you are the dictator of it.");
             }
             SendReply(player, sb.ToString());
@@ -695,17 +698,17 @@ namespace Oxide.Plugins
                 sb.Append("To join another government, you must leave this one first by typing");
                 sb.Append(" \"/gov_leave\".");
             }
-            else if(!govs.ContainsKey(args[0]))
+            else if(!nations.ContainsKey(args[0]))
             {
                 sb.Append("No such government exists.");
             }
-            else if (!govs[args[0]].isInvited(playerId))
+            else if (!nations[args[0]].isInvited(playerId))
             {
                 sb.Append("You were not invited to join this government. Make sure a permitted member of that government has already invited you.");
             }
             else
             {
-                var invitingGov = govs[args[0]];
+                var invitingGov = nations[args[0]];
                 invitingGov.AddMember(playerId, Rank("CITIZEN"));
                 invitingGov.Inviteds.Remove(playerId);
                 sb.Append("You are now a " + GetRank(playerId) + " of the " + lookup[playerId].Name + " government.");
@@ -808,9 +811,9 @@ namespace Oxide.Plugins
 
         #endregion
 
-        #region class Government
+        #region class Nation
 
-        public class Government
+        public class Nation
         {
             // Private Members
             public string Tag { get; set; }
@@ -850,7 +853,7 @@ namespace Oxide.Plugins
                 }
             }
             // Default Constructor
-            public Government ()
+            public Nation ()
             {
                 Members = new Dictionary<string, string>();
                 Guests = new List<string>();
