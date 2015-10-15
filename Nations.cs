@@ -30,6 +30,16 @@ namespace Oxide.Plugins
             DICTATOR = 7
         }
 
+        // Cached Data Storage
+        public Dictionary<ulong, Nation> Lookup { get; }
+        public List<Nation> Nations { get; }
+        public Dictionary<ulong, string> OriginalDisplayNames { get; }
+
+        Loaded()
+        {
+
+        }
+
         public class Nation
         {
             public string Tag { get; set; }
@@ -37,20 +47,34 @@ namespace Oxide.Plugins
             public Dictionary<ulong, Rank> Members { get; }
             public Dictionary<ulong, String> MemberNotes { get; }
         }
-
-        public class GroupManager
+        
+        public static class DataManager
         {
-            
+            public Nations plugin { set; }
         }
 
-        public class PermissionManager
+        public static class GroupManager
         {
-
+            public Nations plugin { set; }
         }
 
-        public class UIManager
+        public static class PermissionManager
         {
+            public Nations plugin { set; }
+        }
 
+        public static class UIManager
+        {
+            public Nations plugin { set; }
+        }
+
+        public static class ConsoleManager
+        {
+            public Nations plugin { set; }
+        }
+        public static class ChatManager
+        {
+            public Nations plugin { set; }
         }
     }
 }
